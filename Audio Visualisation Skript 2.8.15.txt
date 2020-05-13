@@ -1,0 +1,1086 @@
+#Audio visualisation script
+#Blender 2.79b
+#
+#
+#Feel free to modify this script to suit your needs
+#
+#
+#Autor                              AliSot2000
+#key inspiration                    Sirrandalot
+#Tutoreal Video (Sirrandalot)       https://www.youtube.com/watch?v=JDaSk2mX7HU
+#Tutoreal Video (AliSot2000)        https://youtu.be/_IECFOdQeOE
+#
+#
+
+import bpy
+import math
+
+
+#Define Variabels
+
+
+
+#Where and what is your file?
+filepathaudio = '/Users/alisot2000/Desktop/Tutoreal Audio/Tim Peeters - NIVIRO - So Funky (Radio Edit).mp3'  #Filepath + Filename
+                    #
+                    #
+filename = 'Tim Peeters - NIVIRO - So Funky (Radio Edit).mp3' #Filename
+                    # Artist - Name of piece.mp3               
+
+
+#Frame at which the Animation starts, must be an integer
+startframe = 1
+
+
+#Import of Audio 
+import_audio = True
+
+
+#Delete all the audio already there
+clear_audio = False  #<- make sure it is False during your first run
+
+
+#Number of Bars, must be an integer
+bars = 30 #Maximum = 120
+
+
+#Camera Settings
+camera_focal_length = 35            #focal length in mm
+camera_sensor_size = 36             #Sensor Size in mm
+camera_visualiser_realestate = 80   #between 1 and 100 in %
+camera_hight = 0                    #Camera z location
+image_resolution_x = 1920           #Screen X resolution
+image_resolution_y = 1080           #Screen y resolution
+
+#Shape of Visualiser
+circel = False
+array = False
+mirror = False
+
+
+#size of one bare
+cubesize = 1
+
+
+#scaling factor of the bares 
+scaling = 5
+
+
+#distance inbetween the bares
+spacing = 0.5
+
+#Superscale emphasizes the higher frequencies
+superscale = False
+superscaling = 0.125
+
+
+#Selection specific options:
+
+
+
+#Number of arrays, must be an integer
+arrays = 1
+
+
+#analysation difference for every array
+framedifference = 1
+
+
+#only possible if array = True
+
+
+scalingfalloff = False
+falloffinvert = False
+scalingoffset = 0 #<- intended for use with scaling falloff
+
+
+
+#Where is the low frequency located in the circle
+
+
+#With 'mirror'
+bottom = True
+
+
+#Without 'mirror'
+right = True
+
+
+#Material Settings
+material_there = True
+
+
+#Creats a Material for Blender Render Engine
+simple_Material = False
+
+
+#Creats a Material for Cycles Render Engine
+advanced_Material = True
+
+
+#Color
+r = 1
+g = 0
+b = 0.877
+alpha = 1
+
+
+#Simple material only
+diffuse_intensity = 1
+shadeless = False
+
+
+#Color of Reflection
+rs = 1
+gs = 1
+bs = 1
+specular_intensity = 1
+
+
+#Advanced Material only
+
+
+#Set Material Values of Principled Shader
+specularity = 1
+roughness = 0.5
+metalness = 0.0
+
+
+#Adds an Emission Shader to Material
+glow = False
+show_glow = False
+
+
+#Only apply if 'glow' is True
+brightness = 4
+dynamic_Brightness  = False
+
+
+#Only apply if 'dynamic_Brightness' is True
+brightness_falloff = False
+
+
+#Only apply if 'brightness_falloff' is True
+bfalloffinvert = False
+
+
+
+#Make sure that ONLY ONE OPTION IS TRUE
+
+
+#how is the falloff going to occur
+brightness_fallofflinear = True
+brightness_falloff1overx = False
+brightness_falloffamount = 2            #<- if =1, brightness_falloff is False
+
+
+
+
+
+
+
+
+#! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! DON'T CHANGE THE FOLLOWING VARIABLES ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
+
+
+
+
+
+
+#Define some starting Variables for the Materials later.
+material_color = (r, g, b, alpha)
+simple_material_color = (r, g, b)
+spec_color = (rs, gs, bs)
+
+
+#Defining Pi
+pi = math.pi
+
+
+#Define Notestep
+noteStep = 120.0/bars
+
+
+#Twelfth root of 2
+twelf = 2**(1.0/12.0)
+
+
+#initialise start frequencies and number variable
+h = 0.0
+l = 0.0
+last = 0
+
+
+#Define continuous variables
+w = (twelf**noteStep)
+t = 22000/(w**bars)
+
+
+#print to console the twelfth root times the notestep and the factor of every itteration
+print(w, " Variable w is calculated: twelfth root of 2")
+print(t, " Variable t is calculated: 22000 divided by the twelfth root of 2 to the power of the number of bars")
+
+
+#Delets all the placeholders with the previeus materials
+delete_all_materials = True
+
+
+#IF YOU HAVE MATERIALS ENABLED AND WANT TO RERUN THE SCTIPT UP THE COUNTER EVERY TIME YOU RUN THE SCRIPT AGAIN
+retries = 1
+
+
+#Make a difference in the Console :-)       
+print(' - - - - -')
+print('- - - - - ')
+print(' - - - - -')
+print('- - - - - ')
+print(' - - - - -')
+print('- - - - - ')
+print(' - - - - -')
+print('- - - - - ')
+print(' - - - - -')
+print('- - - - - ')
+print('Variables initialised')
+
+
+
+
+
+
+
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+
+#Delete everything in scene except for camera
+try:
+    bpy.data.objects.remove(bpy.data.objects['Lamp'])
+except KeyError:
+    print('No lamp found to delete')
+
+
+
+try:
+    bpy.data.objects.remove(bpy.data.objects['Cube'])
+except KeyError:
+    print('No cube found to delete')
+
+#Reset camera position
+bpy.data.objects['Camera'].location = (0, 0, 0)
+#Set camera rotation
+bpy.data.objects['Camera'].rotation_euler = (pi/2, 0, pi/2)
+
+
+#Set camera focal length
+bpy.data.cameras['Camera'].lens = camera_focal_length
+#Set camera sensor size
+bpy.data.cameras['Camera'].sensor_width = camera_sensor_size
+#Set screen render resolution percentage
+bpy.data.scenes['Scene'].render.resolution_percentage = 100
+#Set screen y resolution
+bpy.data.scenes['Scene'].render.resolution_y = image_resolution_y
+#Set screen x resolution
+bpy.data.scenes['Scene'].render.resolution_x = image_resolution_x
+#Set camera z value
+bpy.data.objects['Camera'].location[2] = camera_hight
+
+
+#Defining Variables for information output to Python console    
+if delete_all_materials:
+      
+    bpy.context.scene.layers[1] = True
+    bpy.context.scene.layers[0] = False
+            
+    bpy.ops.object.select_all(action = 'SELECT')
+    bpy.ops.object.delete(use_global=False)
+        
+    bpy.context.scene.layers[1] = False
+    bpy.context.scene.layers[0] = True
+
+
+
+#set arrays to 1 if array is false
+if (array == False):
+        
+    scalingfalloff = False
+    falloffinvert = False
+
+
+
+if mirror:
+    if (circel == False):
+                
+        q2 = scaling * 2
+        scaling = q2
+
+
+
+if (array == False):
+        
+    print('Array is False')
+    arrays = 1
+    print(arrays, " #of Arrays")
+
+
+
+else:
+
+    print('Array is True')
+    print(arrays, " #of Arrays")       
+
+
+
+
+
+
+#Defing the radius by using the circumference, which is defined as the width of the cubes and the spacing inbeween them times the number of bars
+if (mirror == True):
+
+    radius = ((cubesize + spacing)* bars)/pi
+    angel = pi/bars
+
+
+
+else:
+
+    radius = ((cubesize + spacing)* bars)/(2*pi)
+    angel = 2*pi/bars
+
+
+
+if circel:
+    
+    print('circel is ture, radius & anagel calculated')
+    print('radius = ',radius)
+    print('angel = ',angel)
+
+
+
+
+
+if material_there:       
+    if simple_Material:
+        if advanced_Material:
+            
+            advanced_Material == False
+    
+    
+    if (advanced_Material == False):
+        if (simple_Material == False):
+            
+            material_there = False
+    
+    
+    if advanced_Material:
+        if (glow == False):
+            
+            dynamic_Brightness = False
+            brightness_falloff = False
+    
+
+        if (arrays==False):
+    
+            brightness_falloff = False    
+
+
+        if (brightness_falloff == False):
+    
+            bfalloffinvert == False
+    
+    
+        
+    
+    
+        #If Brightness falloff is selected 
+        if brightness_falloff:        
+        #but both types are true or false
+            if (brightness_fallofflinear == brightness_falloff1overx):
+               
+                brightness_fallofflinear = True
+                brightness_falloff1overx = False
+            
+
+
+
+
+#Set the window context to the sequencer
+bpy.context.area.type = 'SEQUENCE_EDITOR'
+
+
+#Delete sound strip
+if clear_audio:
+
+    bpy.ops.sequencer.select_all(action='SELECT')
+    bpy.ops.sequencer.delete()
+    print('audio cleared')
+
+
+bpy.ops.sequencer.sound_strip_add(filepath = filepathaudio, frame_start=startframe, channel=1)
+print('audio imported')
+
+
+#Add sound strip
+if import_audio==False:
+    bpy.ops.sequencer.mute(unselected=False)
+    
+
+
+
+#Set Animation time to song length
+bpy.context.scene.frame_end = bpy.context.scene.sequence_editor.sequences_all[filename].frame_final_duration + startframe + arrays * framedifference
+
+
+#Set window to Text Editor
+bpy.context.area.type = 'TEXT_EDITOR'
+
+
+
+
+#Setting Camera location
+if circel:
+    visualiser_realestate = 2 * ((cubesize * scaling) + radius) / camera_visualiser_realestate * 100
+    sensor_size = camera_sensor_size / image_resolution_x * image_resolution_y
+    camera_position_x = visualiser_realestate * camera_focal_length * 0.001 / (sensor_size * 0.001)
+    camera_position_y = 0
+
+
+else:
+    visualiser_realestate = (cubesize + spacing) * (bars - 1) / camera_visualiser_realestate * 100
+    sensor_size = camera_sensor_size
+    camera_position_x = visualiser_realestate * camera_focal_length * 0.001 / (sensor_size * 0.001)
+    camera_position_y = (cubesize + spacing) * (bars - 1) / 2
+
+
+bpy.data.objects['Camera'].location[0] = camera_position_x
+bpy.data.objects['Camera'].location[1] = camera_position_y
+
+
+total = arrays * bars
+
+
+
+
+if circel:
+    if mirror:
+
+        total = arrays * bars * 2
+
+
+
+#Defining total for number of materials 
+matnum = arrays
+
+
+        
+
+
+
+
+
+#Loop producing the cubes for the displayment
+for a in range(arrays):
+   
+
+    #Seting current frame to calculated frame for audio bake
+    bpy.context.scene.frame_current = ((a * framedifference) + startframe)
+        
+    
+    if material_there:    
+        
+        if simple_Material:
+        
+            bpy.context.scene.render.engine = 'BLENDER_RENDER'
+        
+        
+        if advanced_Material:
+        
+            #Set Render Engine to Cycles
+            bpy.context.scene.render.engine = 'CYCLES'
+            
+        
+        #Creating Material and dummy object
+        bpy.context.scene.layers[1] = True
+        bpy.context.scene.layers[0] = False
+        
+        bpy.context.scene.cursor_location = (0, 0, 0)
+        
+        current_number = str(a)
+        second_number = str(retries)
+        material_name = 'Material ' + current_number + '_' + second_number
+        print('name of current Material is: ', material_name)
+        
+        bpy.ops.mesh.primitive_cube_add(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+        
+        bpy.context.active_object.name = 'Dummy Cube of ' + material_name
+        
+        #removing any previeus materials with the same name
+        try:
+            bpy.data.materials.remove(bpy.data.materials[material_name])
+        except KeyError:
+            print('No matching material found to delete')
+        
+        bpy.data.materials.new(name=material_name)
+        
+        bpy.context.active_object.data.materials.append(bpy.data.materials[material_name])
+
+    
+        #Simple Material Setup
+        if simple_Material:
+
+            bpy.data.materials[material_name].diffuse_color = simple_material_color
+            bpy.data.materials[material_name].diffuse_intensity = diffuse_intensity
+
+
+            if shadeless:
+
+                bpy.data.materials[material_name].use_shadeless = True
+
+
+            if (shadeless == False):
+
+                bpy.data.materials[material_name].specular_color = spec_color
+                bpy.data.materials[material_name].specular_intensity = specular_intensity
+
+
+
+
+
+
+       #if the Material is advances:        
+        if advanced_Material:
+                
+            #Set area to Node editor
+            bpy.context.area.type = 'NODE_EDITOR'
+            
+            
+            #Activate Nodes
+            bpy.data.materials[material_name].use_nodes = True
+            
+            
+            #Define Variable
+            mat = bpy.data.materials[material_name].node_tree
+            
+            
+            
+            #Node Setup
+            
+            
+            #Remove Diffus standart node
+            mat.nodes.remove(bpy.data.materials[material_name].node_tree.nodes['Diffuse BSDF'])            
+            #Adding Principled Shader
+            mat.nodes.new('ShaderNodeBsdfPrincipled')
+            #Setting variables
+            mat.nodes['Principled BSDF'].inputs['Specular'].default_value = specularity
+            mat.nodes['Principled BSDF'].inputs['Metallic'].default_value = metalness
+            mat.nodes['Principled BSDF'].inputs['Roughness'].default_value = roughness
+            #Adding RGB input node
+            mat.nodes.new('ShaderNodeRGB')
+            #Defining Color of Node
+            bpy.data.materials[material_name].node_tree.nodes['RGB'].outputs[0].default_value = material_color
+            #Linking RGB Node with Principled Shader
+            mat.links.new(mat.nodes['Principled BSDF'].inputs[0], mat.nodes['RGB'].outputs[0])
+            
+            
+            if glow:            
+            
+                #Adding Emission Shader
+                mat.nodes.new('ShaderNodeEmission')
+                if (show_glow == False):
+                    
+                    #Add Mixshader
+                    mat.nodes.new(type="ShaderNodeMixShader")
+                    #Linking output of MixShader with Material output
+                    mat.links.new(mat.nodes['Material Output'].inputs['Surface'], mat.nodes['Mix Shader'].outputs['Shader'])
+                    #Adding Light Path node
+                    mat.nodes.new("ShaderNodeLightPath")    
+                    #Linking Camera Ray output of LP node with Fac of Mix S.    
+                    mat.links.new(mat.nodes['Mix Shader'].inputs['Fac'], mat.nodes['Light Path'].outputs['Is Camera Ray'])
+                    #Linking Principled Shader with Shader of Mix S. 
+                    mat.links.new(mat.nodes['Principled BSDF'].outputs['BSDF'], mat.nodes['Mix Shader'].inputs[2])
+                    #Linking Emission Shader output with Shader of Mix S.
+                    mat.links.new(mat.nodes['Mix Shader'].inputs['Shader'], mat.nodes['Emission'].outputs['Emission'])
+                
+                
+                if show_glow:
+                
+                    #Add AddShader
+                    mat.nodes.new(type="ShaderNodeAddShader")
+                    #Linking output of AddShader with Material output
+                    mat.links.new(mat.nodes['Material Output'].inputs['Surface'], mat.nodes['Add Shader'].outputs['Shader'])
+                    #Linking Principled Shader with Shader of Add S. 
+                    mat.links.new(mat.nodes['Principled BSDF'].outputs['BSDF'], mat.nodes['Add Shader'].inputs[1])
+                    #Linking Emission Shader output with Shader of Add S.
+                    mat.links.new(mat.nodes['Add Shader'].inputs['Shader'], mat.nodes['Emission'].outputs['Emission'])
+                
+                
+                #Linking Emission Shader input with RGB Node
+                mat.links.new(mat.nodes['Emission'].inputs['Color'], mat.nodes['RGB'].outputs['Color'])
+                #Adding Math node
+                mat.nodes.new('ShaderNodeMath')
+                #Operation set to Multiply
+                mat.nodes['Math'].operation = 'MULTIPLY'
+                mat.nodes['Math'].inputs[1].default_value = 1
+                
+                
+                if brightness_falloff:
+                    if (bfalloffinvert==False):
+                        if brightness_falloff1overx:
+                
+                            mat.nodes['Math'].inputs[0].default_value = math.exp( -brightness_falloffamount * (a)) * brightness
+                
+                
+                        if brightness_fallofflinear:
+                
+                            mat.nodes['Math'].inputs[0].default_value = (arrays - a) * brightness 
+                
+                
+                    if bfalloffinvert:
+                        if brightness_falloff1overx:
+                
+                            mat.nodes['Math'].inputs[0].default_value = math.exp( -brightness_falloffamount * (arrays - a)) * brightness
+                
+                            
+                        if brightness_fallofflinear:
+                
+                            mat.nodes['Math'].inputs[0].default_value = a * brightness
+                
+                
+                else:
+                
+                    mat.nodes['Math'].inputs[0].default_value = brightness
+                    
+                
+                        
+                #Linking Math node with Emission Shader
+                mat.links.new(mat.nodes['Emission'].inputs[1], mat.nodes['Math'].outputs[0])
+                
+                
+                #Linking RGB input node with Color of Emission Shader
+                mat.links.new(mat.nodes['Principled BSDF'].inputs[0], mat.nodes['RGB'].outputs[0])
+                
+                
+                if dynamic_Brightness: #Bake that shit 
+                    
+                    mat.nodes['Math'].select = True
+                    mat.nodes['Material Output'].select = False
+                    
+                    if show_glow:
+                    
+                        mat.nodes['Add Shader'].select = False
+                    
+                    
+                    if (show_glow == False):
+                    
+                        mat.nodes['Mix Shader'].select = False
+                        mat.nodes['Light Path'].select = False
+                    
+                    
+                    mat.nodes['Principled BSDF'].select = False
+                    mat.nodes['Emission'].select = False
+                    mat.nodes['RGB'].select = False
+                    
+                    
+                    mat.nodes['Math'].inputs[1].keyframe_insert('default_value')
+                    bpy.context.area.type = 'VIEW_3D'
+                
+                
+                    bpy.context.active_object.select = True
+                    
+                    
+                    bpy.context.area.type = 'GRAPH_EDITOR'
+                    bpy.ops.graph.sound_bake(filepath=filepathaudio, low = 20, high = 20000)
+                
+                    
+            else:
+                
+                #Linking Principled Shader with output
+                mat.links.new(mat.nodes['Material Output'].inputs['Surface'], mat.nodes['Principled BSDF'].outputs['BSDF'])
+        
+        
+        
+        
+        this = a + 1
+        that = str(this)
+        matnumstr = str(matnum)
+        print('Material #' + that + ' of ' + matnumstr + ' created')
+        
+        
+        bpy.context.area.type = 'VIEW_3D'
+        
+        
+        bpy.context.active_object.select = True
+        
+        
+        bpy.context.active_object.hide = False #<- if true, you won't be able to delete the previeus materials
+        bpy.context.area.type = 'TEXT_EDITOR'
+        
+        
+        bpy.context.scene.layers[0] = True
+        bpy.context.scene.layers[1] = False
+        
+        
+        
+        
+        
+        
+        
+        
+    for b in range(bars):
+        if (mirror == False):
+                    
+            #calculate current frequencies 
+            l = t * (w**b)
+            h = t * (w**(b+1))
+            
+            
+            #Print current frequencies 
+            print('current frequencies:')
+            print('    low = ',l)
+            print('    high = ',h)
+
+
+    		#Adding cube and scaling it
+            bpy.context.scene.cursor_location = (0, 0, 0)
+            bpy.ops.mesh.primitive_cube_add(radius = (cubesize/2))            
+            
+            
+            #Superscaling will enlarge the Bars in the higher frequencies
+            if superscale:
+                if (scalingfalloff == False):
+            
+                    Scaling = scaling * (b+1) * superscaling / bars + scalingoffset 
+            
+            
+            if scalingfalloff:
+                if (superscale == False):
+                    if (falloffinvert == False):
+            
+                        Scaling = scaling * ((arrays - a)/arrays) + scalingoffset 
+            
+            
+                    if falloffinvert:
+            
+                        Scaling = scaling * (1 - ((arrays - a)/arrays)) + scalingoffset
+            
+            
+            if superscale:
+                if scalingfalloff:   
+                    if falloffinvert:
+            
+                        Scaling = scaling * (1 - ((arrays - a)/arrays)) * (b+1) * superscaling / bars + scalingoffset
+            
+            
+                    if (falloffinvert == False):
+            
+                        Scaling = scaling * (arrays - a)/arrays * (b+1) * superscaling / bars + scalingoffset
+            
+            
+            if (superscale == False):
+                if (scalingfalloff == False):
+            
+                    Scaling = scaling + scalingoffset
+            
+            
+            bpy.context.active_object.scale.z = Scaling
+            bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+            
+
+			#Define origin for later scaling over audio  
+            bpy.context.scene.cursor_location[2] = -(bpy.context.active_object.dimensions[2]/2)
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+            
+
+            #Define Position of every cube
+            if circel:
+                if right:
+                    
+                    currentangel = (-b) * angel
+                
+                
+                else:
+                
+                    currentangel = b * angel
+                
+                
+                print('current angel = ',currentangel)
+                bpy.context.active_object.rotation_euler.x = currentangel
+                bpy.context.active_object.location = (-(a*(cubesize + spacing)), -math.sin(currentangel)*radius, math.cos(currentangel)*radius) 
+            
+            
+            else:
+            
+                bpy.context.active_object.location = (-(a*(cubesize + spacing)), (b*(cubesize + spacing)), 0)  
+        
+            
+        
+            
+            #Print Status
+            currentlocationx = bpy.context.active_object.location.x
+            currentlocationy = bpy.context.active_object.location.y 
+            currentlocationz = bpy.context.active_object.location.z
+            current = last + 1
+            last = current
+            print('Cube #', current, ' of ', total, ' added at location = ',currentlocationx, ' ', currentlocationy, ' ', currentlocationz)
+            current_C = str(current)
+            current_Array = str(a) 
+            current_Bare = str(b)
+            Cube_name = 'Cube #' + current_C + ' ' + current_Array + ' ' + current_Bare
+            bpy.context.active_object.name = Cube_name
+            
+            
+            #Create Keyframe
+            bpy.context.active_object.animation_data_create()
+            bpy.context.active_object.keyframe_insert('scale', 2, (startframe + a * framedifference))  
+            bpy.context.area.type = 'GRAPH_EDITOR' 
+            
+            
+            #bake sound
+            bpy.ops.graph.sound_bake(filepath=filepathaudio, low = (l), high = (h))
+            
+            
+            if material_there:
+            
+                #adding Material
+                bpy.context.active_object.data.materials.append(bpy.data.materials[material_name])
+              
+        
+        else:
+            if circel:
+                        
+                
+				#calculate current frequencies 
+                l = t * (w**b)
+                h = t * (w**(b+1))
+                
+                
+                #Print current frequencies 
+                print('current frequencies:')
+                print('    l = ',l)
+                print('    h = ',h)
+
+
+                #Add the cube on the left side
+                bpy.context.scene.cursor_location = (0, 0, 0)
+                bpy.ops.mesh.primitive_cube_add(radius = (cubesize/2))
+               
+               
+                #Superscaling will enlarge the Bars in the higher frequencies
+                if superscale:
+                    if (scalingfalloff == False):
+               
+                        Scaling = scaling * (b+1) * superscaling / bars + scalingoffset
+               
+               
+                if scalingfalloff:
+                    if (superscale == False):
+                        if (falloffinvert == False):
+               
+                            Scaling = scaling * ((arrays - a)/arrays) + scalingoffset
+               
+               
+                        if falloffinvert:
+               
+                            Scaling = scaling * (1 - ((arrays - a)/arrays)) + scalingoffset
+               
+               
+                if superscale:
+                    if scalingfalloff:   
+                        if falloffinvert:
+                            
+                            Scaling = scaling * (1 - ((arrays - a)/arrays)) * (b+1) * superscaling / bars + scalingoffset
+                        
+                        
+                        if (falloffinvert == False):
+                        
+                            Scaling = scaling * (arrays - a)/arrays * (b+1) * superscaling / bars + scalingoffset
+                
+                
+                if (superscale == False):
+                    if (scalingfalloff == False):
+                
+                        Scaling = scaling + scalingoffset
+                
+                
+                bpy.context.active_object.scale.z = Scaling
+                bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)    
+                            
+                
+                #Define origin for later scaling over audio  
+                bpy.context.scene.cursor_location[2] = -(bpy.context.active_object.dimensions[2]/2)
+                bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+                currentangel = b * angel + (angel/2)
+                
+                
+                if bottom:
+                
+                    currentangel += pi
+                
+                
+                print(currentangel)
+                bpy.context.active_object.rotation_euler.x = currentangel
+                bpy.context.active_object.location = (-(a*(cubesize + spacing)), -math.sin(currentangel)*radius, math.cos(currentangel)*radius) 
+                
+                
+                #Print Status
+                currentlocationx = bpy.context.active_object.location.x
+                currentlocationy = bpy.context.active_object.location.y 
+                currentlocationz = bpy.context.active_object.location.z
+                current = last + 1
+                last = current
+                print('Cube #', current, ' of ', total, 'added at location = ',currentlocationx, ' ', currentlocationy, ' ', currentlocationz)
+                current_C = str(current)
+                current_Array = str(a) 
+                current_Bare = str(b)
+                Cube_name = 'Cube #' + current_C + ' ' + current_Array + ' ' + current_Bare
+                bpy.context.active_object.name = Cube_name
+            
+                
+                #Create Keyframe
+                bpy.context.active_object.animation_data_create()
+                bpy.context.active_object.keyframe_insert('scale', 2, (startframe + a * framedifference))  
+                
+                
+                
+                
+                bpy.context.area.type = 'GRAPH_EDITOR' 
+                
+                
+                
+                
+                #bake sound
+                bpy.ops.graph.sound_bake(filepath=filepathaudio, low = (l), high = (h))
+                
+                
+                if material_there:
+                    
+                    #adding Material
+                    bpy.context.active_object.data.materials.append(bpy.data.materials[material_name])
+                
+                
+
+
+                #Second Cube ----------------
+
+
+
+                
+                bpy.ops.object.duplicate_move_linked()
+                            
+                                
+				#Define origin for later scaling over audio  
+                oposedangel = currentangel
+                bpy.context.active_object.rotation_euler.x = -oposedangel
+                bpy.context.active_object.location = (-(a*(cubesize + spacing)), math.sin(oposedangel)*radius, math.cos(oposedangel)*radius)
+                
+                
+                #Print Status
+                currentlocationx = bpy.context.active_object.location.x
+                currentlocationy = bpy.context.active_object.location.y 
+                currentlocationz = bpy.context.active_object.location.z 
+                current = last + 1
+                last = current
+                print('Cube #', current, ' of ', total,' added at location = ',currentlocationx, ' ',currentlocationy, ' ',currentlocationz)
+                current_C = str(current)
+                current_Array = str(a) 
+                current_Bare = str(b)
+                Cube_name = 'Cube #' + current_C + ' ' + current_Array + ' ' + current_Bare
+                bpy.context.active_object.name = Cube_name
+                
+                
+            else:               
+                
+				#calculate current frequencies 
+                l = t * (w**b)
+                h = t * (w**(b+1))
+                
+                
+                #Print current frequencies 
+                print('current frequencies:')
+                print('    l = ',l)
+                print('    h = ',h)
+				
+
+				#Add cube and scaling it
+                bpy.context.scene.cursor_location = (0, 0, 0)
+                bpy.ops.mesh.primitive_cube_add(radius = (cubesize/2))
+
+                #Superscaling will enlarge the Bars in the higher frequencies
+                if superscale:
+                    if (scalingfalloff == False):
+
+                        Scaling = scaling * (b+1) * superscaling / bars + scalingoffset
+
+
+                if scalingfalloff:
+                    if (superscale == False):
+                        if (falloffinvert == False):
+
+                            Scaling = scaling * ((arrays - a)/arrays) + scalingoffset
+
+
+                        if falloffinvert:
+
+                            Scaling = scaling * (1 - ((arrays - a)/arrays)) + scalingoffset
+
+
+                if superscale:
+                    if scalingfalloff:   
+                        if falloffinvert:
+
+                            Scaling = scaling * (1 - ((arrays - a)/arrays)) * (b+1) * superscaling / bars + scalingoffset
+
+
+                        if (falloffinvert == False):
+
+                            Scaling = scaling * (arrays - a)/arrays * (b+1) * superscaling / bars + scalingoffset
+
+
+                if (superscale == False):
+                    if (scalingfalloff == False):
+
+                        Scaling = scaling + scalingoffset
+
+
+                bpy.context.active_object.scale.z = Scaling
+                bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+                                
+                
+                #Set location of Cube
+                bpy.context.active_object.location = (-(a*(cubesize + spacing)), (b*(cubesize + spacing)), 0)
+                
+                
+                #Print Status
+                currentlocationx = bpy.context.active_object.location.x
+                currentlocationy = bpy.context.active_object.location.y 
+                currentlocationz = bpy.context.active_object.location.z 
+                current = last + 1
+                last = current
+                print('Cube #', current, ' of ', total,' added at location = ',currentlocationx, ' ',currentlocationy, ' ',currentlocationz)
+                current_C = str(current)
+                current_Array = str(a) 
+                current_Bare = str(b)
+                Cube_name = 'Cube #' + current_C + ' ' + current_Array + ' ' + current_Bare
+                bpy.context.active_object.name = Cube_name
+                
+                
+                #Create Keyframe
+                bpy.context.active_object.animation_data_create()
+                bpy.context.active_object.keyframe_insert('scale', 2, (startframe + a * framedifference))  
+                bpy.context.area.type = 'GRAPH_EDITOR' 
+                
+                           
+                #bake sound
+                bpy.ops.graph.sound_bake(filepath=filepathaudio, low = (l), high = (h))
+                
+                
+                if material_there:
+                    #adding Material
+                    bpy.context.active_object.data.materials.append(bpy.data.materials[material_name])
+            
+
+
+
+
+
+bpy.context.area.type = 'TEXT_EDITOR'
+print("Done")
